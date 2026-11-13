@@ -1,8 +1,8 @@
 #include "fxpch.h"
 
-#if defined(FX_PLATFORM_LINUX) && !defined(FX_PLATFORM_ANDROID)
+#ifdef FX_PLATFORM_LINUX
 
-#include "FileDialog.h"
+#include "Frostnux/Core/FileDialog.h"
 #include <cstdio>
 #include <array>
 #include <sstream>
@@ -16,8 +16,7 @@ namespace Frostnux {
 			auto first = filter.find('|');
 			if (first == std::string::npos) return "*.*";
 			auto end = filter.find('|', first + 1);
-			std::string patterns = filter.substr(first + 1,
-				end == std::string::npos ? std::string::npos : end - first - 1);
+			std::string patterns = filter.substr(first + 1, end == std::string::npos ? std::string::npos : end - first - 1);
 
 			std::string out;
 			std::stringstream ss(patterns);

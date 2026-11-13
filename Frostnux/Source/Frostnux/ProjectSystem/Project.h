@@ -75,6 +75,8 @@ namespace Frostnux {
 		std::vector<std::string> flags;
 		std::vector<std::string> includeDirs;
 		std::vector<std::string> defines;
+		std::vector<std::string> libraryDirs;	// -L
+		std::vector<std::string> libraries;		// -l
 	};
 
 	class Project {
@@ -89,6 +91,7 @@ namespace Frostnux {
 		std::vector<std::string> headers;
 		std::string outputDir = "bin";
 		std::string outputName;
+		std::vector<std::string> dependencies;
 
 		std::vector<ProjectConfig> configurations;
 		std::string activeConfig = "Debug";
@@ -100,6 +103,27 @@ namespace Frostnux {
 
 		[[nodiscard]] std::filesystem::path Directory() const { return path.parent_path(); }
 		[[nodiscard]] const ProjectConfig* ActiveConfig() const;
+
+		void AddDependency(const std::string& depName)
+		{
+			if (depName == name) return;
+			for (const auto& d : dependencies)
+			{
+				if (d == depName) return;
+			}
+			dependencies.push_back(depName);
+			Save();
+		}
+
+		void RemoveDependency(const std::string& depName)
+		{
+			auto it = std::remove(dependencies.begin(), dependencies.end(), depName);
+			if (it != dependencies.end())
+			{
+				dependencies.erase(it, dependencies.end());
+				Save();
+			}
+		}
 	};
 
 }

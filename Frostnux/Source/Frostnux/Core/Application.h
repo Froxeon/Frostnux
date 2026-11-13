@@ -10,7 +10,7 @@ namespace Frostnux {
 	class Application
 	{
 	public:
-		Application();
+		Application(const std::vector<std::string>& args = {});
 		virtual ~Application();
 
 		void Run();
@@ -28,18 +28,21 @@ namespace Frostnux {
 		inline Window* GetWindowPointer() { return m_MainWindow.get(); }
 
 		static bool HasInstance() { return s_Instance != nullptr; }
+
+		const std::vector<std::string>& GetCommandLineArgs() const { return m_CommandLineArgs; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 
 		std::unique_ptr<class Window> m_MainWindow;
 		std::vector<std::unique_ptr<Window>> m_Windows;
+		std::vector<std::string> m_CommandLineArgs;
 		bool m_Running = true;
 		LayerStack m_LayerStack;
 		static Application* s_Instance;
 		double unsemi_transparency = 0.99f;
 	};
 
-	// To be defined in CLIENT 
-	Frostnux::Application* CreateApplication();
+	// To be defined in CLIENT
+	Frostnux::Application* CreateApplication(const std::vector<std::string>& args = {});
 
 }

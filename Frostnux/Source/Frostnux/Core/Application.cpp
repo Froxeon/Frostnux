@@ -26,7 +26,8 @@ namespace Frostnux {
 
 	Application* Application::s_Instance = nullptr;
 
-	Application::Application()
+	Application::Application(const std::vector<std::string>& args)
+		: m_CommandLineArgs(args)
 	{
 		FX_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
@@ -73,6 +74,8 @@ namespace Frostnux {
 			s_FontLoaded = true;
 			FX_CORE_INFO("Font loaded successfully.");
 		}
+
+		SettingsManager::Get().Save();
 	}
 
 	Application::~Application()

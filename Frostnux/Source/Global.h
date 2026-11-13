@@ -3,8 +3,8 @@
 namespace Frostnux
 {
 
-	static std::string s_MainVersion = "2026.3.7";
-	static std::string s_DetailedVersion = "2026.3.7-3";
+	static std::string s_MainVersion = "2026.4";
+	static std::string s_DetailedVersion = "2026.4.1";
 	static float s_FontSize = 24.0f;
 	static bool s_FontLoaded = false;
 

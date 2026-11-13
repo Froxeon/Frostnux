@@ -75,6 +75,7 @@ namespace Frostnux {
 
 		void BuildTree();
 		void InsertFileRecursive(Node& parent, const std::filesystem::path& relPath, const std::filesystem::path& absPath);
+		void InsertFolderRecursive(Node& parent, const std::filesystem::path& relPath);
 
 		void DrawNode(const Node& node, int depth, float& y, float x, float width);
 		void CalcTreeHeight(const Node& node, float& total) const;

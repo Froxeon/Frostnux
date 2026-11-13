@@ -107,13 +107,11 @@ namespace Frostnux
 
 				PopupMenu::Item itemNew;
 				itemNew.label = sNew;
-				itemNew.shortcut = "Ctrl+N";
 				itemNew.submenu = std::move(newSub);
 				mainMenu.push_back(std::move(itemNew));
 
 				PopupMenu::Item itemOpen;
 				itemOpen.label = sOpen;
-				itemOpen.shortcut = "Ctrl+O";
 				itemOpen.submenu = std::move(openSub);
 				mainMenu.push_back(std::move(itemOpen));
 
@@ -130,6 +128,7 @@ namespace Frostnux
 
 				PopupMenu::Item itemSaveAll;
 				itemSaveAll.label = sSaveAll;
+				itemSaveAll.shortcut = "Ctrl+Shift+S";
 				itemSaveAll.onClick = [editor]() { FX_CORE_INFO("Save All Files"); editor->SaveAllTabs(); };
 				mainMenu.push_back(std::move(itemSaveAll));
 

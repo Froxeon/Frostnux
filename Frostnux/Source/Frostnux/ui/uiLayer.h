@@ -8,6 +8,11 @@
 #include "uiTools/ui.h"
 
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <queue>
+#include <atomic>
+#include <string>
 
 namespace Frostnux {
 
@@ -40,6 +45,9 @@ namespace Frostnux {
 
 		void LoadSolution(const std::string& path);
 		void CreateNewSolution(const std::string& path);
+
+		void BuildSolution();
+		void RunLastBuild();
 	private:
 		std::vector<uiWindow*> m_Windows;
 		uiTitleBar* m_TitleBar = nullptr;
@@ -57,9 +65,18 @@ namespace Frostnux {
 
 		std::string m_CurrentLangCode;
 		std::string m_LastBuiltExe;
+		bool m_CurrentIsDarkTheme = false;
 
-		void BuildStartupProject();
-		void RunLastBuild();
+		std::thread m_BuildThread;
+		std::atomic<bool> m_IsBuilding{ false };
+		std::mutex m_OutputMutex;
+		std::queue<std::string> m_OutputQueue;
+
+		void InitShortcutBar();
+
+		void BuildThreadFunc();
+		void QueueOutput(const std::string& line);
+		void FlushOutputQueue();
 		void RefreshUIText();
 	};
 

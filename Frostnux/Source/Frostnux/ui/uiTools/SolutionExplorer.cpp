@@ -10,11 +10,28 @@
 #include "Frostnux/Events/KeyEvent.h"
 #include "PopupMenu.h"
 #include "TextInputDialog.h"
+#include "uiMessageBox.h"
 #include "Frostnux/Core/FileDialog.h"
 
 namespace Frostnux {
 
 	float SolutionExplorer::m_ScrollY = 0.0f;
+
+	namespace {
+		bool ShouldIgnoreFolder(const std::string& name)
+		{
+			if (name.empty() || name[0] == '.') return true;
+			static const char* kIgnored[] =
+			{
+				"build", "Build", "out", "Out", "bin", "Bin",
+				"obj", "Obj", "x64", "x86", "Debug", "Release",
+				"CMakeFiles", "node_modules"
+			};
+			for (auto* s : kIgnored)
+				if (name == s) return true;
+			return false;
+		}
+	}
 
 	SolutionExplorer::SolutionExplorer(const std::string& name, Solution* solution, PropertiesWindow* properties)
 		: uiWindow(name), m_Solution(solution), m_Properties(properties)
@@ -86,20 +103,43 @@ namespace Frostnux {
 
 	//		Node pNode;
 	//		pNode.kind = NodeKind::Project;
-	//		pNode.name = proj->name;
+	//		pNode.name = (proj->name == m_Solution->startupProjectName) ? ("[Startup] " + proj->name) : proj->name;
 	//		pNode.fullPath = proj->Directory().generic_string();
 	//		pNode.projectIndex = pi;
 	//		pNode.expanded = true;
 
-	//		auto files = proj->ResolveSources();
+	//		proj->ScanSources();
 	//		auto base = proj->Directory();
-
-	//		for (auto& f : files)
+	//		for (auto& f : proj->sources)
 	//		{
 	//			std::error_code ec;
-	//			auto rel = std::filesystem::relative(f, base, ec);
-	//			if (ec) rel = f.filename();
-	//			InsertFileRecursive(pNode, rel, f);
+	//			auto absPath = base / f;
+	//			InsertFileRecursive(pNode, absPath.lexically_relative(base), absPath);
+	//		}
+
+	//		std::error_code dirEc;
+	//		for (auto it = std::filesystem::recursive_directory_iterator(base, std::filesystem::directory_options::skip_permission_denied, dirEc); it != std::filesystem::recursive_directory_iterator(); it.increment(dirEc))
+	//		{
+	//			if (dirEc) { dirEc.clear(); continue; }
+
+	//			std::error_code isDirEc;
+	//			if (!it->is_directory(isDirEc)) continue;
+
+	//			auto rel = it->path().lexically_relative(base);
+	//			if (rel.empty()) continue;
+
+	//			bool skip = false;
+	//			for (auto& part : rel)
+	//			{
+	//				if (ShouldIgnoreFolder(part.string())) { skip = true; break; }
+	//			}
+	//			if (skip)
+	//			{
+	//				it.disable_recursion_pending();
+	//				continue;
+	//			}
+
+	//			InsertFolderRecursive(pNode, rel);
 	//		}
 
 	//		m_Root.children.push_back(std::move(pNode));
@@ -132,12 +172,50 @@ namespace Frostnux {
 
 			proj->ScanSources();
 			auto base = proj->Directory();
-			for (auto& f : proj->sources)
+
+			std::error_code ec;
+			for (auto it = std::filesystem::recursive_directory_iterator(base, std::filesystem::directory_options::skip_permission_denied, ec); it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
 			{
-				std::error_code ec;
-				auto absPath = base / f;
-				InsertFileRecursive(pNode, absPath.lexically_relative(base), absPath);
+				if (ec) { ec.clear(); continue; }
+
+				auto rel = it->path().lexically_relative(base);
+				if (rel.empty()) continue;
+
+				bool skip = false;
+				for (auto& part : rel)
+				{
+					if (ShouldIgnoreFolder(part.string())) { skip = true; break; }
+				}
+
+				if (skip)
+				{
+					if (it->is_directory())
+						it.disable_recursion_pending();
+					continue;
+				}
+
+				if (it->is_directory())
+				{
+					InsertFolderRecursive(pNode, rel);
+				}
+				else if (it->is_regular_file())
+				{
+					if (it->path().extension() == ".fxproject")
+						continue;
+					if (it->path().extension() == ".frostnux")
+						continue;
+					InsertFileRecursive(pNode, rel, it->path());
+				}
 			}
+
+			std::sort(pNode.children.begin(), pNode.children.end(), [](const Node& a, const Node& b) {
+				if (a.kind != b.kind)
+				{
+					return static_cast<int>(a.kind) < static_cast<int>(b.kind);
+				}
+				return a.name < b.name;
+				});
+
 			m_Root.children.push_back(std::move(pNode));
 		}
 	}
@@ -160,6 +238,7 @@ namespace Frostnux {
 				leaf.kind = NodeKind::File;
 				leaf.name = it->string();
 				leaf.fullPath = absPath.generic_string();
+				leaf.projectIndex = cur->projectIndex;
 				cur->children.push_back(std::move(leaf));
 				return;
 			}
@@ -181,12 +260,49 @@ namespace Frostnux {
 				f.kind = NodeKind::Folder;
 				f.name = folderName;
 				f.fullPath = curAbs.generic_string();
+				f.projectIndex = cur->projectIndex;
 				f.expanded = true;
 				cur->children.push_back(std::move(f));
 				found = &cur->children.back();
 			}
 			cur = found;
 			it = next;
+		}
+	}
+
+	void SolutionExplorer::InsertFolderRecursive(Node& parent, const std::filesystem::path& relPath)
+	{
+		Node* cur = &parent;
+		std::filesystem::path curAbs = parent.fullPath;
+
+		for (auto& part : relPath)
+		{
+			std::string folderName = part.string();
+			if (folderName.empty() || folderName == ".") continue;
+
+			curAbs /= folderName;
+
+			Node* found = nullptr;
+			for (auto& c : cur->children)
+			{
+				if (c.kind == NodeKind::Folder && c.name == folderName)
+				{
+					found = &c;
+					break;
+				}
+			}
+			if (!found)
+			{
+				Node f;
+				f.kind = NodeKind::Folder;
+				f.name = folderName;
+				f.fullPath = curAbs.generic_string();
+				f.projectIndex = cur->projectIndex;
+				f.expanded = true;
+				cur->children.push_back(std::move(f));
+				found = &cur->children.back();
+			}
+			cur = found;
 		}
 	}
 
@@ -227,137 +343,249 @@ namespace Frostnux {
 
 		dispatcher.Dispatch<MouseButtonPressedEvent>([this](MouseButtonPressedEvent& e)
 			{
-			if (e.GetMouseButton() == GLFW_MOUSE_BUTTON_RIGHT)
-			{
-				float mx = e.GetMouseX(), my = e.GetMouseY();
-				float contentX = GetX();
-				float contentY = GetY() + 30;
-				float contentW = GetWidth();
-				float contentH = GetHeight() - 30;
-
-				if (mx < contentX || mx > contentX + contentW || my < contentY || my > contentY + contentH)
-					return false;
-
-				nlohmann::json j;
-				std::ifstream file("Resources/Languages/" + LanguageManager::GetLanguageCode() + ".json");
-				file >> j;
-
-				m_VisibleNodes.clear();
-				float yOffset = 0.0f;
-				BuildVisibleList(m_Root, 0, contentY, yOffset);
-
-				const Node* clickedNode = nullptr;
-				for (const auto& vn : m_VisibleNodes)
+				if (e.GetMouseButton() == GLFW_MOUSE_BUTTON_RIGHT)
 				{
-					if (my >= vn.y && my <= vn.y + m_LineHeight)
+					float mx = e.GetMouseX(), my = e.GetMouseY();
+					float contentX = GetX();
+					float contentY = GetY() + 30;
+					float contentW = GetWidth();
+					float contentH = GetHeight() - 30;
+
+					if (mx < contentX || mx > contentX + contentW || my < contentY || my > contentY + contentH)
+						return false;
+
+					nlohmann::json j;
+					std::ifstream file("Resources/Languages/" + LanguageManager::GetLanguageCode() + ".json");
+					file >> j;
+
+					m_VisibleNodes.clear();
+					float yOffset = 0.0f;
+					BuildVisibleList(m_Root, 0, contentY, yOffset);
+
+					const Node* clickedNode = nullptr;
+					for (const auto& vn : m_VisibleNodes)
 					{
-						clickedNode = vn.node;
-						break;
+						if (my >= vn.y && my <= vn.y + m_LineHeight)
+						{
+							clickedNode = vn.node;
+							break;
+						}
 					}
-				}
-				if (!clickedNode) return false;
+					if (!clickedNode) return false;
 
-				std::vector<PopupMenu::Item> menuItems;
+					std::vector<PopupMenu::Item> menuItems;
 
-				if (clickedNode->kind == NodeKind::File)
-				{
-					PopupMenu::Item openItem; openItem.label = j.value("Open", "Open");
-					openItem.onClick = [this, path = clickedNode->fullPath]()
-						{
-						if (m_FileOpenCallback) m_FileOpenCallback(path);
-						};
-					menuItems.push_back(openItem);
-
-					PopupMenu::Item deleteItem; deleteItem.label = "Delete";
-					deleteItem.onClick = [this, path = clickedNode->fullPath]()
-						{
-						std::error_code ec;
-						std::filesystem::remove(path, ec);
-						if (!ec) { Refresh(); }
-						};
-					menuItems.push_back(deleteItem);
-				}
-				else if (clickedNode->kind == NodeKind::Project || clickedNode->kind == NodeKind::Folder)
-				{
-					bool isProject = (clickedNode->kind == NodeKind::Project);
-					std::string dirPath = clickedNode->fullPath;
-					int projIdx = clickedNode->projectIndex;
-
-					PopupMenu::Item newFileItem; newFileItem.label = j.value("New File...", "New File...");
-					newFileItem.onClick = [this, dirPath, isProject, projIdx]()
-						{
-						TextInputDialog::Get().Open("Create New File", "main.cpp", [this, dirPath, isProject, projIdx](const std::string& name)
+					if (clickedNode->kind == NodeKind::File)
+					{
+						PopupMenu::Item openItem; openItem.label = j.value("Open", "Open");
+						openItem.onClick = [this, path = clickedNode->fullPath]()
 							{
-							std::filesystem::path target = dirPath;
-							target /= name;
-							if (!std::filesystem::exists(target))
+								if (m_FileOpenCallback) m_FileOpenCallback(path);
+							};
+						menuItems.push_back(openItem);
+
+						PopupMenu::Item deleteItem; deleteItem.label = "Delete";
+						deleteItem.onClick = [this, path = clickedNode->fullPath]()
 							{
-								if (isProject && m_Solution)
+								std::error_code ec;
+								std::filesystem::remove(path, ec);
+								if (!ec) { Refresh(); }
+							};
+						menuItems.push_back(deleteItem);
+					}
+					else if (clickedNode->kind == NodeKind::Project || clickedNode->kind == NodeKind::Folder)
+					{
+						bool isProject = (clickedNode->kind == NodeKind::Project);
+						std::string dirPath = clickedNode->fullPath;
+						int projIdx = clickedNode->projectIndex;
+
+						PopupMenu::Item newFileItem;
+						newFileItem.label = j.value("New File...", "New File...");
+						newFileItem.onClick = [this, dirPath, isProject, projIdx]()
+							{
+								TextInputDialog::Get().Open("Create New File", "main.cpp",
+									[this, dirPath, isProject, projIdx](const std::string& name)
+									{
+										if (name.empty()) return;
+
+										std::filesystem::path target = std::filesystem::path(dirPath) / name;
+										std::error_code ec;
+										if (std::filesystem::exists(target, ec)) return;
+
+										std::ofstream out(target, std::ios::binary);
+										if (!out) return;
+										out.close();
+
+										if (isProject && m_Solution && projIdx >= 0)
+										{
+											auto* proj = m_Solution->projects[projIdx].get();
+											proj->ScanSources();
+											m_Solution->Save();
+										}
+										Refresh();
+									});
+							};
+						menuItems.push_back(newFileItem);
+
+						PopupMenu::Item newFolderItem;
+						newFolderItem.label = j.value("New Folder...", "New Folder...");
+						newFolderItem.onClick = [this, dirPath, isProject, projIdx]()
+							{
+								TextInputDialog::Get().Open("Create New Folder", "NewFolder",
+									[this, dirPath, isProject, projIdx](const std::string& name)
+									{
+										if (name.empty()) return;
+
+										std::filesystem::path target = std::filesystem::path(dirPath) / name;
+										std::error_code ec;
+										if (std::filesystem::exists(target, ec)) return;
+
+										if (!std::filesystem::create_directories(target, ec) || ec) return;
+
+										if (isProject && m_Solution && projIdx >= 0)
+										{
+											auto* proj = m_Solution->projects[projIdx].get();
+											proj->ScanSources();
+											m_Solution->Save();
+										}
+										Refresh();
+									});
+							};
+						menuItems.push_back(newFolderItem);
+
+						if (isProject)
+						{
+							PopupMenu::Item addExisting;
+							addExisting.label = "Add Existing File...";
+							addExisting.onClick = [this, dirPath, projIdx]()
 								{
-									auto* proj = m_Solution->projects[projIdx].get();
-									proj->ScanSources();
-									m_Solution->Save();
+									const std::string path = OpenFileDialog("C++ Files|*.cpp;*.h;*.hpp|All Files|*.*");
+									if (!path.empty() && m_Solution && projIdx >= 0)
+									{
+										auto* proj = m_Solution->projects[projIdx].get();
+										proj->ScanSources();
+										m_Solution->Save();
+										Refresh();
+									}
+								};
+							menuItems.push_back(addExisting);
+
+							PopupMenu::Item setStartup;
+							setStartup.label = "Set as Startup Project";
+							setStartup.onClick = [this, projIdx]()
+								{
+									if (m_Solution && projIdx >= 0)
+									{
+										std::string realName = m_Solution->projects[projIdx]->name;
+										m_Solution->startupProjectName = realName;
+										m_Solution->Save();
+										Refresh();
+									}
+								};
+							menuItems.push_back(setStartup);
+
+							if (m_Solution && projIdx >= 0)
+							{
+								Project* targetProj = m_Solution->projects[projIdx].get();
+
+								for (int i = 0; i < m_Solution->projects.size(); ++i)
+								{
+									if (i == projIdx) continue;
+									Project* otherProj = m_Solution->projects[i].get();
+
+									bool isAlreadyDep = false;
+									for (const auto& dep : targetProj->dependencies)
+									{
+										if (dep == otherProj->name) { isAlreadyDep = true; break; }
+									}
+									if (isAlreadyDep) continue;
+
+									PopupMenu::Item addDepItem;
+									addDepItem.label = "Add dependency: " + otherProj->name;
+									addDepItem.onClick = [this, targetProj, otherProj]()
+										{
+											if (m_Solution->WouldCreateCycle(targetProj, otherProj->name))
+											{
+												FX_CORE_ERROR("Can not add dependency: Cycle detected!");
+											}
+											else
+											{
+												targetProj->AddDependency(otherProj->name);
+												FX_CORE_INFO("Added dependency: {} -> {}", targetProj->name, otherProj->name);
+												Refresh();
+											}
+										};
+									menuItems.push_back(addDepItem);
 								}
-								Refresh();
-							}
-							});
-						};
-					menuItems.push_back(newFileItem);
 
-					if (isProject)
-					{
-						PopupMenu::Item addExisting; addExisting.label = "Add Existing File...";
-						addExisting.onClick = [this, dirPath, projIdx]()
-							{
-							const std::string path = OpenFileDialog("C++ Files|*.cpp;*.h;*.hpp|All Files|*.*");
-							if (!path.empty() && m_Solution)
-							{
-								auto* proj = m_Solution->projects[projIdx].get();
-								proj->ScanSources();
-								m_Solution->Save();
-								Refresh();
+								for (const auto& depName : targetProj->dependencies)
+								{
+									PopupMenu::Item removeDepItem;
+									removeDepItem.label = "Remove dependency: " + depName;
+									removeDepItem.onClick = [this, targetProj, depName]()
+										{
+											targetProj->RemoveDependency(depName);
+											FX_CORE_INFO("Remove dependency: {} -> {}", targetProj->name, depName);
+											Refresh();
+										};
+									menuItems.push_back(removeDepItem);
+								}
 							}
-							};
-						menuItems.push_back(addExisting);
 
-						PopupMenu::Item setStartup; setStartup.label = "Set as Startup Project";
-						setStartup.onClick = [this, name = clickedNode->name, projIdx]()
-							{
-							if (m_Solution)
-							{
-								std::string realName = m_Solution->projects[projIdx]->name;
-								m_Solution->startupProjectName = realName;
-								m_Solution->Save();
-								Refresh();
-							}
-							};
-						menuItems.push_back(setStartup);
-					}
-				}
-				else if (clickedNode->kind == NodeKind::SolutionRoot)
-				{
-					PopupMenu::Item newProjItem; newProjItem.label = j.value("New Project...", "New Project...");
-					newProjItem.onClick = [this]()
+						}
+						else
 						{
-						TextInputDialog::Get().Open("New Project", "Project", [this](const std::string& name)
-							{
-							if (m_Solution)
-							{
-								m_Solution->AddProject(name, ProjectKind::ConsoleApp);
-								m_Solution->Save();
-								Refresh();
-							}
-							});
-						};
-					menuItems.push_back(newProjItem);
-				}
+							PopupMenu::Item deleteFolderItem;
+							deleteFolderItem.label = j.value("Delete Folder", "Delete Folder");
+							deleteFolderItem.onClick = [this, dirPath]()
+								{
+									uiMessageBox::Get().Open(
+										"Delete Folder",
+										"Are you sure you want to delete this folder and all its contents? This action cannot be undone.",
+										[this, dirPath]()
+										{
+											std::error_code ec;
+											std::filesystem::remove_all(dirPath, ec);
 
-				if (!menuItems.empty())
-				{
-					PopupMenu::Get().Open(mx, my, std::move(menuItems));
+											if (!ec)
+											{
+												FX_CORE_INFO("Successfully deleted folder: {}", dirPath);
+												Refresh();
+											}
+											else
+											{
+												FX_CORE_ERROR("Failed to delete folder: {}", ec.message());
+											}
+										}
+									);
+								};
+							menuItems.push_back(deleteFolderItem);
+						}
+					}
+					else if (clickedNode->kind == NodeKind::SolutionRoot)
+					{
+						PopupMenu::Item newProjItem; newProjItem.label = j.value("New Project...", "New Project...");
+						newProjItem.onClick = [this]()
+							{
+								TextInputDialog::Get().Open("New Project", "Project", [this](const std::string& name)
+									{
+										if (m_Solution)
+										{
+											m_Solution->AddProject(name, ProjectKind::ConsoleApp);
+											m_Solution->Save();
+											Refresh();
+										}
+									});
+							};
+						menuItems.push_back(newProjItem);
+					}
+
+					if (!menuItems.empty())
+					{
+						PopupMenu::Get().Open(mx, my, std::move(menuItems));
+					}
+					return true;
 				}
-				return true;
-			}
 
 				if (e.GetMouseButton() != GLFW_MOUSE_BUTTON_LEFT) return false;
 
@@ -601,7 +829,7 @@ namespace Frostnux {
 
 		if (expanded)
 		{
-			Renderer2D::DrawTriangle(x, y,x + 10.0f, y,x + 5.0f, y + 10.0f,0.8f, 0.8f, 0.8f, 1.0f);
+			Renderer2D::DrawTriangle(x, y, x + 10.0f, y, x + 5.0f, y + 10.0f, 0.8f, 0.8f, 0.8f, 1.0f);
 			m_Folder_Open_Icon->Draw(x + 20, y - 5, m_LineHeight * 0.7f, m_LineHeight * 0.7f);
 		}
 		else

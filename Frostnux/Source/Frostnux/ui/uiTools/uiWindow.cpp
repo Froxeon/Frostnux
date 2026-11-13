@@ -642,9 +642,9 @@ namespace Frostnux {
 			s_BottomHeight *= rH;
 		}
 
-		s_LeftWidth = std::clamp(s_LeftWidth, 100.0f, w * 0.5f);
-		s_RightWidth = std::clamp(s_RightWidth, 100.0f, w * 0.5f);
-		s_BottomHeight = std::clamp(s_BottomHeight, 100.0f, h * 0.5f);
+		s_LeftWidth = std::clamp(s_LeftWidth, std::min(100.0f, w * 0.5f), std::max(100.0f, w * 0.5f));
+		s_RightWidth = std::clamp(s_RightWidth, std::min(100.0f, w * 0.5f), std::max(100.0f, w * 0.5f));
+		s_BottomHeight = std::clamp(s_BottomHeight, std::min(100.0f, h * 0.5f), std::max(100.0f, h * 0.5f));
 
 		UpdateDockLayout();
 	}

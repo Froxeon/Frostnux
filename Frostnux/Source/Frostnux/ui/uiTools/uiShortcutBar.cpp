@@ -26,13 +26,6 @@ namespace Frostnux {
 
 	void uiShortcutBar::OnUpdate(float deltaTime)
 	{
-		std::string langCode = LanguageManager::GetLanguageCode();
-		if (m_CurrentLangCode != langCode)
-		{
-			m_CurrentLangCode = langCode;
-			RebuildButtons();
-		}
-
 		for (auto& btn : m_Buttons)
 		{
 			btn->OnTooltipUpdate(deltaTime);
@@ -62,6 +55,7 @@ namespace Frostnux {
 	{
 		m_Groups.clear();
 		m_Buttons.clear();
+		m_GroupEndX.clear();
 	}
 
 	void uiShortcutBar::RebuildButtons()
@@ -85,7 +79,7 @@ namespace Frostnux {
 			auto& group = m_Groups[g];
 			for (auto& item : group.items)
 			{
-				auto btn = std::make_unique<uiButton>(item.text, x, y, width, height, ButtonStyles::NoBackgroundOrLine);
+				auto btn = std::make_unique<uiImageButton>(item.path, x, y, width, height, ButtonStyles::NoBackgroundOrLine);
 				btn->SetCallback([callback = item.callback]() { if (callback) callback(); });
 				btn->SetTooltip(item.tooltip);
 				group.buttons.push_back(btn.get());

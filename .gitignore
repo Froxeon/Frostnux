@@ -1,7 +1,9 @@
 # Directories
 .vs/
+.idea/
 Binaries/
 Binaries-Intermediates/
+Sandbox/config/
 
 # Files
 *.vcxproj

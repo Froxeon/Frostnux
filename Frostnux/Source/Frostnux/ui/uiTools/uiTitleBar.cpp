@@ -100,7 +100,19 @@ namespace Frostnux
 							if (!path.empty())
 								uiLayerInstance.LoadSolution(path);
 						};
+
+					PopupMenu::Item i2;
+					i2.label = j.value("Folder", "Folder");
+					i2.onClick = [&uiLayerInstance]()
+						{
+							FX_CORE_INFO("Open Folder");
+							const std::string path = SelectFolderDialog();
+							if (!path.empty())
+								uiLayerInstance.OpenFolder(path);
+						};
+
 					openSub.push_back(i1);
+					openSub.push_back(i2);
 				}
 
 				std::vector<PopupMenu::Item> mainMenu;
@@ -166,7 +178,7 @@ namespace Frostnux
 				std::vector<PopupMenu::Item> mainMenu;
 
 				PopupMenu::Item newProj;
-				newProj.label = j.value("NewProject", "New Project");
+				newProj.label = j.value("New Project", "New Project");
 				newProj.onClick = []()
 					{
 						const std::string path = SaveFileDialog("Untitled.frostnux", "Frostnux Solution|*.frostnux");
@@ -175,13 +187,22 @@ namespace Frostnux
 				mainMenu.push_back(std::move(newProj));
 
 				PopupMenu::Item openProj;
-				openProj.label = j.value("OpenProject", "Open Project");
+				openProj.label = j.value("Open Project", "Open Project");
 				openProj.onClick = []()
 					{
 						const std::string path = OpenFileDialog("Frostnux Solution|*.frostnux");
 						if (!path.empty()) uiLayer::Get().LoadSolution(path);
 					};
 				mainMenu.push_back(std::move(openProj));
+
+				PopupMenu::Item openFolder;
+				openFolder.label = j.value("Open Folder", "Open Folder");
+				openFolder.onClick = []()
+					{
+						const std::string path = SelectFolderDialog();
+						if (!path.empty()) uiLayer::Get().OpenFolder(path);
+					};
+				mainMenu.push_back(std::move(openFolder));
 
 				PopupMenu::Get().Open(x, y + buttonHeight, std::move(mainMenu));
 			});

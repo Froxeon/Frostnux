@@ -1,0 +1,67 @@
+name: Bug report
+description: Report a reproducible engine, tooling, packaging, or documentation bug.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem.
+        Please include enough detail to reproduce the issue on another machine.
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Affected area
+      description: Which part of the project is involved?
+      options:
+        - Native runtime (C++ / Vulkan)
+        - Python bindings
+        - Tooling / CLI
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Tag, release, or commit hash where the issue occurs.
+      placeholder: main @ abc1234
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS version, C++ version, compiler/toolchain, GPU, and anything else relevant.
+      placeholder: |
+        Windows 11 26H2
+        C++ 20
+        Visual Studio (release and edition)
+        OpenGL version
+        GPU / driver
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true

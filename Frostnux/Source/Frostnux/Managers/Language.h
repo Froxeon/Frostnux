@@ -1,8 +1,9 @@
 #pragma once
+#include <string>
 
 namespace Frostnux {
 
-	enum class LanguageType
+	enum class LanguageType : uint8_t
 	{
 		en_US,
 		zh_CN,

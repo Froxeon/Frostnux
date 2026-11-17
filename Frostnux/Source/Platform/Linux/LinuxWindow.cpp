@@ -249,6 +249,9 @@ namespace Frostnux {
 	void LinuxWindow::SetUnsemi_transparency(unsigned int value)
 	{
 #ifdef FX_PLATFORM_LINUX
+		if (m_Data.unsemi_transparency == value)
+			return;
+
 		m_Data.unsemi_transparency = value;
 
 		Display* display = glfwGetX11Display();

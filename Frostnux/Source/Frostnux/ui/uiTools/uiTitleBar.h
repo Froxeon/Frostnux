@@ -36,20 +36,20 @@ namespace Frostnux
 		void UpdateWindowButtonsPosition(int windowWidth);
 
 		struct ButtonRect
-		{ 
-			float x, y, w, h; 
+		{
+			float x, y, w, h;
 		};
 		ButtonRect m_MinimizeRect, m_MaximizeRect, m_CloseRect;
+
+		float m_DragStartX = 0.0f, m_DragStartY = 0.0f;
+		int   m_WindowStartX = 0, m_WindowStartY = 0;
+		float m_SeparateLineX = 0.0f, m_SeparateLineY = 10.0f;
+
 		bool m_MinimizeHovered = false;
 		bool m_MaximizeHovered = false;
 		bool m_CloseHovered = false;
 		bool m_IsMaximized = false;
-
 		bool m_DraggingMainWindow = false;
-		float m_DragStartX = 0.0f, m_DragStartY = 0.0f;
-		int m_WindowStartX = 0, m_WindowStartY = 0;
-
-		float m_SeparateLineX = 0.0f, m_SeparateLineY = 10.0f;
 	};
 
 }

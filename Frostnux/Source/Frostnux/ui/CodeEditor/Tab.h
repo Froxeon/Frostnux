@@ -59,7 +59,7 @@ namespace Frostnux {
 	class ScrollBar
 	{
 	public:
-		enum class Orientation { Vertical, Horizontal };
+		enum class Orientation : uint8_t { Vertical, Horizontal };
 
 		explicit ScrollBar(Orientation o = Orientation::Vertical) : orient_(o) {}
 
@@ -143,11 +143,11 @@ namespace Frostnux {
 			thumbPos_ = t * range;
 		}
 
-		Orientation orient_;
 		double content_ = 0, viewport_ = 0, value_ = 0;
 		double trackX_ = 0, trackY_ = 0, trackW_ = 0, trackH_ = 0;
 		double thumbPos_ = 0, thumbLen_ = 0;
 		double dragOffset_ = 0;
+		Orientation orient_;
 		bool   dragging_ = false;
 	};
 
@@ -155,27 +155,26 @@ namespace Frostnux {
 	{
 		std::u32string	title = U"untitled";
 		std::string		path;
-		bool			dirty = false;
 
 		TextBuffer	 buffer;
-		Selection	 selection;
 		UndoStack	 undo;
 		Highlighter	 highlighter;
+		SymbolIndex	 symbols;
+
+		Selection	 selection;
+		ScrollBar	 vbar{ ScrollBar::Orientation::Vertical };
+		ScrollBar	 hbar{ ScrollBar::Orientation::Horizontal };
 
 		double scrollX = 0;
 		double scrollY = 0;
-
-		ScrollBar vbar { ScrollBar::Orientation::Vertical };
-		ScrollBar hbar { ScrollBar::Orientation::Horizontal };
-
-		int		desiredCol = 0;
-		double	longestWidth = 0;
-		bool	longestDirty = true;
-
-		SymbolIndex symbols;
-
-		bool   symbolsDirty = false;
+		double longestWidth = 0;
 		double symbolsDirtyAt = 0.0;
+
+		int desiredCol = 0;
+
+		bool dirty = false;
+		bool longestDirty = true;
+		bool symbolsDirty = false;
 
 		void invalidateHighlight();
 		void markSymbolsDirty(double now);

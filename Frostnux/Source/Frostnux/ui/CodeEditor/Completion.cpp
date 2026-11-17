@@ -202,7 +202,7 @@ namespace Frostnux {
 			for (const auto& kw : keywords())
 			{
 				if (!startsWith(kw, prefix)) continue;
-				result.items.push_back({ kw, kw, {}, classifyKeyword(kw) });
+				result.items.push_back({ kw, kw,{}, classifyKeyword(kw) });
 			}
 
 			auto all = symbols.allSymbols();
@@ -210,7 +210,7 @@ namespace Frostnux {
 			{
 				if (!startsWith(s->name, prefix)) continue;
 				if (alreadyContains(result.items, s->name)) continue;
-				result.items.push_back({ s->name, s->name, s->typeName, toCompletionKind(s->kind)});
+				result.items.push_back({ s->name, s->name, std::u32string(symbols.typeNameOf(*s)), toCompletionKind(s->kind) });
 			}
 		}
 
@@ -228,8 +228,8 @@ namespace Frostnux {
 			else
 			{
 				const Symbol* objSym = symbols.findSymbolAnywhere(qualifier);
-				if (!objSym || objSym->typeName.empty()) return result;
-				scopeId = symbols.findScope(objSym->typeName);
+				if (!objSym || objSym->typeNameId < 0) return result;
+				scopeId = symbols.findScope(symbols.typeNameOf(*objSym));
 			}
 
 			if (scopeId < 0) return result;
@@ -238,7 +238,7 @@ namespace Frostnux {
 			{
 				if (!startsWith(s->name, prefix)) continue;
 				if (alreadyContains(result.items, s->name)) continue;
-				result.items.push_back({ s->name, s->name, s->typeName, toCompletionKind(s->kind) });
+				result.items.push_back({ s->name, s->name, std::u32string(symbols.typeNameOf(*s)), toCompletionKind(s->kind) });
 			}
 		}
 

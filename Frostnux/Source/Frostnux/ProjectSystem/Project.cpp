@@ -77,7 +77,11 @@ namespace Frostnux {
 
 		if (sources.empty())
 		{
-			ScanSources();
+			ScanSources(true);
+		}
+		else
+		{
+			m_LastScanTime = std::chrono::steady_clock::now();
 		}
 		return true;
 	}
@@ -125,14 +129,29 @@ namespace Frostnux {
 		return true;
 	}
 
-	void Project::ScanSources()
+	void Project::ScanSources(bool force)
 	{
+		const auto now = std::chrono::steady_clock::now();
+		if (!force && !sources.empty() && !headers.empty())
+		{
+			const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_LastScanTime);
+			if (elapsed < std::chrono::seconds(5))
+				return;
+		}
+
 		sources.clear();
 		headers.clear();
 		auto base = Directory();
 		std::error_code ec;
 
-		if (!std::filesystem::is_directory(base, ec)) return;
+		if (!std::filesystem::is_directory(base, ec))
+		{
+			m_LastScanTime = now;
+			return;
+		}
+
+		sources.reserve(256);
+		headers.reserve(128);
 
 		for (const auto& entry : std::filesystem::recursive_directory_iterator(base, ec))
 		{
@@ -142,15 +161,13 @@ namespace Frostnux {
 				auto rel = std::filesystem::relative(entry.path(), base, ec);
 
 				if (ext == ".cpp" || ext == ".c" || ext == ".cc" || ext == ".cxx")
-				{
 					sources.push_back(rel.generic_string());
-				}
 				else if (ext == ".h" || ext == ".hpp" || ext == ".hxx")
-				{
 					headers.push_back(rel.generic_string());
-				}
 			}
 		}
+
+		m_LastScanTime = now;
 	}
 
 	const ProjectConfig* Project::ActiveConfig() const

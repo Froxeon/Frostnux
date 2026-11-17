@@ -9,8 +9,8 @@ namespace Frostnux {
 	* Events in Frostnux Studio are currently blocking, meaning when an event occurs it immediately gets dispatched and must be dealt with right then and there.
 	* For the future, a better strategy might be to buffer events in an event bus and process them during the "event" part of the update stage.
 	*/
-	
-	enum class EventType
+
+	enum class EventType : uint8_t
 	{
 		Nore = 0,
 		WindowClose, WindowResize, WindowFocus, WindowMoved, AppTick, AppUpdate, AppRender,
@@ -21,16 +21,13 @@ namespace Frostnux {
 	enum EventCategory
 	{
 		None = 0,
-		EventCategoryApplication	= BIT(0),
-		EventCategoryInput			= BIT(1),
-		EventCategoryKeyboard		= BIT(2),
-		EventCategoryMouse			= BIT(3),
-		EventCategoryMouseButton	= BIT(4)
+		EventCategoryApplication = BIT(0),
+		EventCategoryInput = BIT(1),
+		EventCategoryKeyboard = BIT(2),
+		EventCategoryMouse = BIT(3),
+		EventCategoryMouseButton = BIT(4)
 	};
 
-//#define EVENT_CLASS_TYPE(type) static EventType GetStaticType() { return EventType::##type; }\
-//								virtual EventType GetEventType() const override { return GetStaticType(); }\
-//								virtual const char* GetName() const override { return #type; }
 #define EVENT_CLASS_TYPE(type) \
 	static EventType GetStaticType() { return Frostnux::EventType::type; } \
 	virtual EventType GetEventType() const override { return GetStaticType(); } \
@@ -40,6 +37,8 @@ namespace Frostnux {
 	class Event
 	{
 	public:
+		virtual ~Event() = default;
+
 		virtual EventType GetEventType() const = 0;
 		virtual const char* GetName() const = 0;
 		virtual int GetCategoryFlags() const = 0;
@@ -48,6 +47,7 @@ namespace Frostnux {
 		{
 			return GetCategoryFlags() & category;
 		}
+
 		bool m_Handled = false;
 	};
 
@@ -56,8 +56,7 @@ namespace Frostnux {
 	public:
 		EventDispatcher(Event& event)
 			: m_Event(event)
-		{
-		}
+		{}
 		template<typename T, typename F>
 		bool Dispatch(const F& func)
 		{

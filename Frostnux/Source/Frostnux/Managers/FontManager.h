@@ -5,7 +5,7 @@
 
 namespace Frostnux {
 
-	enum class FontStyle
+	enum class FontStyle : uint8_t
 	{
 		Regular,
 		Bold,
@@ -41,6 +41,7 @@ namespace Frostnux {
 				return std::hash<std::string>()(k.name) ^ (std::hash<int>()((int)k.style) << 1);
 			}
 		};
+
 		std::unordered_map<FontKey, std::unique_ptr<TextRenderer>, FontKeyHash> m_Fonts;
 	};
 

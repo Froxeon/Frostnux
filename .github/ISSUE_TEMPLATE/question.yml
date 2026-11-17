@@ -1,0 +1,25 @@
+name: Question
+description: Ask a usage or workflow question about the engine.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about Frostnux? You're in the right place.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: Please describe your usage or workflow question.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context (version, environment, what you have tried, etc.).
+    validations:
+      required: false

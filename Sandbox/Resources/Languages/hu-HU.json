@@ -20,6 +20,7 @@
 	"SaveFile": "Mentése Fájl",
 	"SaveAs": "Más néven mentés",
 	"SaveAllFiles": "Minden fájl mentése",
+	"Delete": "Törlés",
 
 	"Undo": "Mégsem",
 	"Redo": "Újra",
@@ -60,7 +61,10 @@
 	"New Project": "Új projekt",
 	"New Project Desc": "Új C++ projekt létrehozása",
 	"Open Project...": "Projekt megnyitása",
+	"Open Project": "Projekt megnyitása",
 	"Open Project Desc": "Nyisd meg a .frostnux fájlt",
+	"Open Folder": "Mappa megnyitása",
+	"Open Folder Desc": "Bármely mappa megnyitása munkaterületként",
 
 	"Input Tip": "Nyomja meg az Enter billentyűt a megerősítéshez, az Esc billentyűt a visszalépéshez.",
 
@@ -73,5 +77,18 @@
 	"Dark": "Sötét",
 	"Paper": "Papír",
 	"Iron": "Fémes",
-	"Frost": "Fagypor"
+	"Frost": "Fagypor",
+
+	"Add dependency": "Függőség hozzáadása",
+	"Remove dependency": "Függőség eltávolítása",
+	"Set as Startup Project": "Beállítás indító projektnek",
+	"Add Existing File...": "Meglévő fájl hozzáadása...",
+	"New Folder...": "Új mappa...",
+	"Delete Folder Desc": "Biztosan törölni szeretnéd ezt a mappát és az összes tartalmát? Ezt a műveletet nem lehet visszavonni.",
+	"Delete Folder": "Mappa törlése",
+	"Create New Folder": "Új mappa létrehozása",
+	"NewFolder": "Új mappa",
+
+	"New File...": "Új fájl...",
+	"Create New File": "Új fájl létrehozása"
 }

@@ -199,7 +199,11 @@ namespace Frostnux {
 		m_InputPopup.mode = InputPopupMode::None;
 		m_RefPanel.active = false;
 		if (m_Active >= 0 && m_Active < n)
-			rebuildFolds(*m_Tabs[m_Active]);
+		{
+			Tab& t = *m_Tabs[m_Active];
+			rebuildFolds(t);
+			syncBars(t);
+		}
 		if (m_OnTabListChanged) m_OnTabListChanged();
 	}
 
@@ -1173,12 +1177,9 @@ namespace Frostnux {
 		}
 
 		for (auto& t : m_Tabs)
-		{
 			t->highlighter.update(t->buffer);
-			syncBars(*t);
-		}
 
-		constexpr double kDebounceSeconds = 0.1; // 100 ms
+		constexpr double kDebounceSeconds = 0.1;
 		for (auto& t : m_Tabs)
 		{
 			if (t->symbolsDirty && (now - t->symbolsDirtyAt) > kDebounceSeconds)
@@ -1188,9 +1189,6 @@ namespace Frostnux {
 				t->symbolsDirtyAt = 0.0;
 			}
 		}
-
-		if (Tab* t = activeTab())
-			updateReferenceHighlights(*t);
 
 		if (Tab* t = activeTab())
 		{
@@ -1212,6 +1210,7 @@ namespace Frostnux {
 		}
 
 		layout(x, y, w, h);
+		syncBars(*t);
 
 		m_Renderer->drawRect(x, y, w, h, m_Theme.bg);
 		drawTabBar();
@@ -2705,19 +2704,23 @@ namespace Frostnux {
 		if (m_InputPopup.mode != InputPopupMode::GoToSymbol) return;
 
 		const auto& prefix = m_InputPopup.text;
-		for (const auto* s : t->symbols.allSymbols())
-		{
-			if (prefix.empty())
+
+		t->symbols.forEachSymbol([&](const Symbol& s)
 			{
-				m_InputPopup.matches.push_back({ s->name, s->typeName, s->kind, s->line, s->col });
-			}
-			else if (s->name.size() >= prefix.size()
-				&& s->name.substr(0, prefix.size()) == prefix)
-			{
-				m_InputPopup.matches.push_back({ s->name, s->typeName, s->kind, s->line, s->col });
-			}
-			if (m_InputPopup.matches.size() >= 64) break;
-		}
+				if (m_InputPopup.matches.size() >= 64) return;
+
+				bool match = prefix.empty()
+					|| (s.name.size() >= prefix.size() && s.name.substr(0, prefix.size()) == prefix);
+				if (!match) return;
+
+				m_InputPopup.matches.push_back({
+					s.name,
+					std::u32string(t->symbols.typeNameOf(s)),
+					s.kind,
+					s.line,
+					s.col
+					});
+			});
 	}
 
 	void CodeEditor::acceptInputPopup()

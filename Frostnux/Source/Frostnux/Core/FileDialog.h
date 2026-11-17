@@ -7,4 +7,6 @@ namespace Frostnux {
 
 	[[nodiscard]] std::string OpenFileDialog(const std::string& filter = "All Files|*.*");
 
+	[[nodiscard]] std::string SelectFolderDialog();
+
 }

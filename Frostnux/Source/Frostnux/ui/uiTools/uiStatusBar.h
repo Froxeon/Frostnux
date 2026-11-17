@@ -22,7 +22,6 @@ namespace Frostnux {
 		void DrawProgress() const;
 
 		std::string m_StatusText;
-
 		float m_Progress = -1.0f;
 		float m_Height = 35.0f;
 	};

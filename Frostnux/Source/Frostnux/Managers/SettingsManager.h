@@ -58,12 +58,13 @@ namespace Frostnux {
 		AppSettings		m_Settings;
 		ProjectSettings	m_ProjectSettings;
 
-		bool		m_bProjectLoaded = false;
 		std::string	m_ProjectRootPath;
 		std::string	m_ProjectPath;
 
 		std::string m_Path = "config/config.json";
 		std::string m_RootPath = "config";
+
+		bool		m_bProjectLoaded = false;
 	};
 
 }

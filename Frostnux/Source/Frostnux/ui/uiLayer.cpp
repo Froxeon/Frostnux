@@ -15,6 +15,97 @@
 namespace Frostnux
 {
 
+	namespace {
+
+		struct BuildToolchain
+		{
+			std::filesystem::path	compiler;
+			std::filesystem::path	archiver;
+			std::string				compilerExtraFlags;
+		};
+
+		BuildToolchain LocateToolchain()
+		{
+			BuildToolchain tc;
+			std::error_code ec;
+			const auto root = std::filesystem::current_path(ec);
+
+#ifdef FX_PLATFORM_WINDOWS
+			const auto bundledBin = root / "Resources" / "Compilers" / "bin";
+			const auto bundledGpp = bundledBin / "g++.exe";
+			if (std::filesystem::exists(bundledGpp, ec))
+			{
+				tc.compiler = bundledGpp;
+
+				const auto bundledAr = bundledBin / "ar.exe";
+				tc.archiver = std::filesystem::exists(bundledAr, ec) ? bundledAr : bundledBin / "ar.exe";
+
+				const auto libexec = root / "Resources" / "Compilers" / "libexec"
+					/ "gcc" / "x86_64-w64-mingw32";
+				if (std::filesystem::exists(libexec, ec))
+				{
+					for (auto it = std::filesystem::directory_iterator(libexec, ec);
+						!ec && it != std::filesystem::directory_iterator(); it.increment(ec))
+					{
+						if (it->is_directory(ec))
+						{
+							tc.compilerExtraFlags = " -B \"" + it->path().generic_string() + "\" ";
+							break;
+						}
+					}
+				}
+				return tc;
+			}
+
+			tc.compiler = "g++.exe";
+			tc.archiver = "ar.exe";
+#else
+			tc.compiler = "g++";
+			tc.archiver = "ar";
+#endif
+			return tc;
+		}
+
+		std::string QuotePath(const std::filesystem::path& p)
+		{
+			return "\"" + p.generic_string() + "\"";
+		}
+
+		std::string OptimizationFlags(const std::string& ms)
+		{
+			if (ms == "/O2" || ms == "-O2")  return "-O2 -march=native -flto -DNDEBUG";
+			if (ms == "/O1" || ms == "-O1")  return "-O1";
+			if (ms == "/Ox" || ms == "-O3")  return "-O3 -march=native -flto -DNDEBUG";
+			if (ms == "/Os" || ms == "-Os")  return "-Os -flto -DNDEBUG";
+			if (ms == "/Od" || ms == "-O0")  return "-O0 -g";
+			return ms.empty() ? std::string("-O2") : ms;
+		}
+
+#ifdef FX_PLATFORM_WINDOWS
+		constexpr const char* kExeExt = ".exe";
+		constexpr const char* kSharedLibPrefix = "";
+		constexpr const char* kSharedLibExt = ".dll";
+		constexpr const char* kStaticLibPrefix = "lib";
+		constexpr const char* kStaticLibExt = ".a";
+#else
+		constexpr const char* kExeExt = "";
+		constexpr const char* kSharedLibPrefix = "lib";
+		constexpr const char* kSharedLibExt = ".so";
+		constexpr const char* kStaticLibPrefix = "lib";
+		constexpr const char* kStaticLibExt = ".a";
+#endif
+
+		const char* KindToStr(ProjectKind k)
+		{
+			switch (k) {
+			case ProjectKind::StaticLib:	return "static lib";
+			case ProjectKind::DynamicLib:	return "dynamic lib";
+			default:						return "console app";
+			}
+		}
+
+	}
+
 	GLRenderer uiLayer::m_EditorRenderer;
 	CodeEditor uiLayer::m_Editor{ &m_EditorRenderer };
 
@@ -128,66 +219,10 @@ namespace Frostnux
 		m_TitleBar = new uiTitleBar();
 		m_TitleBar->OnAttach();
 
-		//std::string findBookmark = "";
-		//std::string addBookmark = "";
-		//std::string deleteBookmark = "";
-		//std::string nextBookmark = "";
-		//std::string clearBookmark = "";
-		//if (ThemeManager::IsDarkTheme())
-		//{
-		//	findBookmark = "Resources/Images/FindBookmark_White.png";
-		//	addBookmark = "Resources/Images/AddBookmark_White.png";
-		//	deleteBookmark = "Resources/Images/DeleteBookmark_White.png";
-		//	nextBookmark = "Resources/Images/NextBookmark_White.png";
-		//	clearBookmark = "Resources/Images/ClearBookmarks_White.png";
-		//}
-		//else
-		//{
-		//	findBookmark = "Resources/Images/FindBookmark_Black.png";
-		//	addBookmark = "Resources/Images/AddBookmark_Black.png";
-		//	deleteBookmark = "Resources/Images/DeleteBookmark_Black.png";
-		//	nextBookmark = "Resources/Images/NextBookmark_Black.png";
-		//	clearBookmark = "Resources/Images/ClearBookmarks_Black.png";
-		//}
-
 		m_CurrentIsDarkTheme = ThemeManager::IsDarkTheme();
 		m_ShortcutBar = new uiShortcutBar();
 		m_ShortcutBar->OnAttach();
 		InitShortcutBar();
-		//std::vector<ShortcutItem> editGroup =
-		//{
-		//	{ "undo", "Resources/Images/Undo.png", j.value("Undo", "Undo"), []()
-		//	 { FX_INFO("Undo"); } },
-		//	{ "redo", "Resources/Images/Redo.png", j.value("Redo", "Redo"), []()
-		//	 { FX_INFO("Redo"); } }
-		//};
-		//std::vector<ShortcutItem> buildGroup =
-		//{
-		//	{ "build", "Resources/Images/Build.png", j.value("Build", "Build"), [this]()
-		//	 { BuildSolution(); } },
-		//	{ "clean", "Resources/Images/Clean.png", j.value("Clean", "Clean"), []()
-		//	 { FX_INFO("Clean"); } },
-		//	{ "run", "Resources/Images/Run.png", j.value("Run", "Run"), [this]()
-		//	 { RunLastBuild(); } },
-		//	{ "debug", "Resources/Images/Debug.png", j.value("Debug", "Debug"), []()
-		//	 { FX_INFO("Debug"); } }
-		//};
-		//std::vector<ShortcutItem> bookmarkGroup =
-		//{
-		//	{ "findbookmark", findBookmark, j.value("FindBookmark", "Find Bookmark"), []()
-		//	 { FX_INFO("Find Bookmark"); } },
-		//	{ "addbookmark", addBookmark, j.value("AddBookmark", "Add Bookmark"), []()
-		//	 { FX_INFO("Add Bookmark"); } },
-		//	{ "deletebookmark", deleteBookmark, j.value("DeleteBookmark", "Delete Bookmark"), []()
-		//	 { FX_INFO("Delete Bookmark"); } },
-		//	{ "nextbookmark", nextBookmark, j.value("NextBookmark", "Next Bookmark"), []()
-		//	 { FX_INFO("Next Bookmark"); } },
-		//	{ "clearbookmarks", clearBookmark, j.value("ClearBookmarks", "Clear Bookmarks"), []()
-		//	 { FX_INFO("Clear Bookmarks"); } }
-		//};
-		//m_ShortcutBar->AddGroup(editGroup, true);
-		//m_ShortcutBar->AddGroup(buildGroup, true);
-		//m_ShortcutBar->AddGroup(bookmarkGroup, false);
 
 		uiWindow::InitDockSystem(0.0f, 130.0f, width, height - 130.0f - 35.0f);
 
@@ -269,6 +304,11 @@ namespace Frostnux
 				const std::string path = OpenFileDialog("Frostnux Solution|*.frostnux");
 				if (!path.empty())
 					LoadSolution(path);
+			},
+			[this]()
+			{
+				const std::string path = SelectFolderDialog();
+				if (!path.empty()) OpenFolder(path);
 			});
 		m_CurrentLangCode = LanguageManager::GetLanguageCode();
 
@@ -709,107 +749,168 @@ namespace Frostnux
 
 	void uiLayer::BuildThreadFunc()
 	{
+		struct FlagGuard
+		{
+			std::atomic<bool>& f;
+			~FlagGuard() { f.store(false); }
+		} guard{ m_IsBuilding };
+
 		Project* startupProj = m_Solution.GetStartupProject();
+		if (!startupProj)
+		{
+			QueueOutput("[Build] Error: No startup project found.");
+			return;
+		}
+
 		QueueOutput("[Build] Starting build for " + startupProj->name + "...");
 
-		auto buildOrder = m_Solution.GetBuildOrder(startupProj);
-
-		struct BuildArtifact
+		const auto buildOrder = m_Solution.GetBuildOrder(startupProj);
+		if (buildOrder.empty())
 		{
-			std::string libPath;
-			std::string includeDir;
+			QueueOutput("[Build] Error: empty build order.");
+			return;
+		}
+
+		struct Artifact
+		{
+			std::filesystem::path libPath;
+			std::filesystem::path includeDir;
 		};
-		std::unordered_map<std::string, BuildArtifact> artifacts;
+		std::unordered_map<std::string, Artifact> artifacts;
+		artifacts.reserve(buildOrder.size() * 2);
 
-		std::filesystem::path rootDir = std::filesystem::current_path();
-		std::filesystem::path gppPath = rootDir / "Resources" / "Compilers" / "bin" / "g++.exe";
-		std::filesystem::path libexecPath = rootDir / "Resources" / "Compilers" / "libexec" / "gcc" / "x86_64-w64-mingw32" / "15.2.0";
-		std::filesystem::path arPath = rootDir / "Resources" / "Compilers" / "bin" / "ar.exe";
+		const BuildToolchain tc = LocateToolchain();
+		QueueOutput("[Build] Compiler: " + tc.compiler.generic_string());
+		if (!tc.archiver.empty())
+			QueueOutput("[Build] Archiver: " + tc.archiver.generic_string());
 
-		bool buildSuccess = true;
+		bool allOk = true;
 
 		for (Project* proj : buildOrder)
 		{
 			proj->ScanSources();
-			std::string sourceFiles;
-			for (const auto& src : proj->sources)
-			{
-				auto fullPath = proj->Directory() / src;
-				sourceFiles += "\"" + fullPath.string() + "\" ";
-			}
 
-			if (sourceFiles.empty())
+			if (proj->sources.empty())
 			{
-				QueueOutput("[Build] Skipping " + proj->name + ": No sources.");
+				QueueOutput("[Build] Skipping " + proj->name + ": no source files.");
 				continue;
 			}
 
-			std::filesystem::path outDir = proj->Directory() / proj->outputDir / proj->activeConfig;
-			std::filesystem::create_directories(outDir);
-
-			std::string cmd;
-			std::string exePath;
-
-			std::string depFlags = "";
-			for (const auto& depName : proj->dependencies) 
+			const auto outDir = proj->Directory() / proj->outputDir / proj->activeConfig;
+			std::error_code ec;
+			std::filesystem::create_directories(outDir, ec);
+			if (ec)
 			{
-				if (artifacts.count(depName))
-				{
-					depFlags += " -I\"" + artifacts[depName].includeDir + "\" ";
-					depFlags += " \"" + artifacts[depName].libPath + "\" ";
-				}
+				QueueOutput("[Build] Error: cannot create output dir: " + outDir.generic_string());
+				allOk = false; break;
 			}
 
-			QueueOutput("[Build] Building Project: " + proj->name);
+			std::vector<std::filesystem::path> srcs;
+			srcs.reserve(proj->sources.size());
+			for (const auto& s : proj->sources)
+				srcs.push_back(proj->Directory() / s);
 
-			if (proj->kind == ProjectKind::StaticLib)
+			std::string depFlags;
+			for (const auto& depName : proj->dependencies)
 			{
-				std::string objPath = (outDir / (proj->name + ".o")).string();
-				std::string libPath = (outDir / ("lib" + proj->name + ".a")).string();
-				cmd = "\"" + gppPath.string() + "\" -B \"" + libexecPath.string() + "\" -std=" + proj->standard + " -c " + sourceFiles + " -o \"" + objPath + "\" " + depFlags;
-				cmd += " && \"" + arPath.string() + "\" rcs \"" + libPath + "\" \"" + objPath + "\"";
-				artifacts[proj->name] = { libPath, proj->Directory().string() };
-			}
-			else if (proj->kind == ProjectKind::DynamicLib)
-			{
-				exePath = (outDir / (proj->name + ".dll")).string();
-				cmd = "\"" + gppPath.string() + "\" -B \"" + libexecPath.string() + "\" -std=" + proj->standard + " -shared " + sourceFiles + " -o \"" + exePath + "\" " + depFlags;
-				artifacts[proj->name] = { exePath, proj->Directory().string() };
-			}
-			else
-			{
-				exePath = (outDir / (proj->name + ".exe")).string();
-				cmd = "\"" + gppPath.string() + "\" -B \"" + libexecPath.string() + "\" -std=" + proj->standard + " -g -Wall " + sourceFiles + " -o \"" + exePath + "\" " + depFlags;
-				m_LastBuiltExe = exePath;
+				auto it = artifacts.find(depName);
+				if (it == artifacts.end()) continue;
+				depFlags += " -I" + QuotePath(it->second.includeDir);
+				depFlags += " " + QuotePath(it->second.libPath);
 			}
 
+			std::string cfgFlags;
+			std::string optFlags = "-O2 -DNDEBUG";
 			const ProjectConfig* cfg = proj->ActiveConfig();
 			if (cfg)
 			{
-				for (const auto& inc : cfg->includeDirs) cmd += " -I\"" + (proj->Directory() / inc).string() + "\"";
-				for (const auto& def : cfg->defines) cmd += " -D" + def;
-				for (const auto& libDir : cfg->libraryDirs) cmd += " -L\"" + (proj->Directory() / libDir).string() + "\"";
-				for (const auto& lib : cfg->libraries) cmd += " -l" + lib;
+				optFlags = OptimizationFlags(cfg->optimization);
+				for (const auto& inc : cfg->includeDirs)
+					cfgFlags += " -I" + QuotePath(proj->Directory() / inc);
+				for (const auto& def : cfg->defines)
+					cfgFlags += " -D" + def;
+				for (const auto& libDir : cfg->libraryDirs)
+					cfgFlags += " -L" + QuotePath(proj->Directory() / libDir);
+				for (const auto& lib : cfg->libraries)
+					cfgFlags += " -l" + lib;
 			}
 
-			QueueOutput("[Build] Command: " + cmd);
+			const std::string baseFlags = " -std=" + proj->standard + " " + optFlags + " -Wall" + tc.compilerExtraFlags;
 
-			int exitCode = ProcessRunner::RunSync(cmd, proj->Directory().string(), [this](const std::string& line) { this->QueueOutput(line); });
+			QueueOutput("[Build] Building " + proj->name + " (" + KindToStr(proj->kind) + ", " + proj->activeConfig + ")");
+
+			int exitCode = 0;
+
+			if (proj->kind == ProjectKind::StaticLib)
+			{
+				std::vector<std::filesystem::path> objs;
+				objs.reserve(srcs.size());
+
+				for (const auto& src : srcs)
+				{
+					const auto obj = outDir / (src.stem().string() + ".o");
+					objs.push_back(obj);
+
+					const std::string cmd = QuotePath(tc.compiler) + baseFlags + " -c " + QuotePath(src) + " -o " + QuotePath(obj) + depFlags + cfgFlags;
+
+					QueueOutput("[Build] " + cmd);
+					exitCode = ProcessRunner::RunSync(cmd, proj->Directory().string(), [this](const std::string& line) { QueueOutput(line); });
+					if (exitCode != 0) break;
+				}
+
+				if (exitCode == 0 && !tc.archiver.empty())
+				{
+					const auto libPath = outDir / (std::string(kStaticLibPrefix) + proj->name + kStaticLibExt);
+
+					std::string arCmd = QuotePath(tc.archiver) + " rcs " + QuotePath(libPath);
+					for (const auto& o : objs) arCmd += " " + QuotePath(o);
+
+					QueueOutput("[Build] " + arCmd);
+					exitCode = ProcessRunner::RunSync(arCmd, proj->Directory().string(), [this](const std::string& line) { QueueOutput(line); });
+
+					if (exitCode == 0)
+						artifacts[proj->name] = { libPath, proj->Directory() };
+				}
+			}
+			else if (proj->kind == ProjectKind::DynamicLib)
+			{
+				const auto out = outDir / (std::string(kSharedLibPrefix) + proj->name + kSharedLibExt);
+
+				std::string cmd = QuotePath(tc.compiler) + baseFlags + " -shared";
+				for (const auto& s : srcs) cmd += " " + QuotePath(s);
+				cmd += " -o " + QuotePath(out) + depFlags + cfgFlags;
+
+				QueueOutput("[Build] " + cmd);
+				exitCode = ProcessRunner::RunSync(cmd, proj->Directory().string(), [this](const std::string& line) { QueueOutput(line); });
+
+				if (exitCode == 0)
+					artifacts[proj->name] = { out, proj->Directory() };
+			}
+			else // ConsoleApp
+			{
+				const auto out = outDir / (proj->name + kExeExt);
+
+				std::string cmd = QuotePath(tc.compiler) + baseFlags;
+				for (const auto& s : srcs) cmd += " " + QuotePath(s);
+				cmd += " -o " + QuotePath(out) + depFlags + cfgFlags;
+
+				QueueOutput("[Build] " + cmd);
+				exitCode = ProcessRunner::RunSync(cmd, proj->Directory().string(), [this](const std::string& line) { QueueOutput(line); });
+
+				if (exitCode == 0)
+					m_LastBuiltExe = out.string();
+			}
 
 			if (exitCode != 0)
 			{
 				QueueOutput("[Build] Failed building " + proj->name + ". Aborting.");
-				buildSuccess = false;
+				allOk = false;
 				break;
 			}
 		}
 
-		if (buildSuccess)
-		{
+		if (allOk)
 			QueueOutput("[Build] All projects built successfully!");
-		}
-
-		m_IsBuilding = false;
 	}
 
 	void uiLayer::RunLastBuild()
@@ -824,7 +925,7 @@ namespace Frostnux
 
 		ProcessRunner::Run("\"" + m_LastBuiltExe + "\"", "", [this](const std::string& line)
 			{
-			if (m_OutputPanel) m_OutputPanel->AppendLine(line);
+				if (m_OutputPanel) m_OutputPanel->AppendLine(line);
 			},
 			[this](int exitCode)
 			{
@@ -852,9 +953,10 @@ namespace Frostnux
 			{
 				namespace fs = std::filesystem;
 				fs::path p(base);
-				std::string candidate = (p.parent_path()
-					/ (p.stem().string() + suffix + p.extension().string())).string();
-				return fs::exists(candidate) ? candidate : base;
+				fs::path candidatePath = p.parent_path()
+					/ (p.stem().string() + suffix + p.extension().string());
+				std::string candidate = candidatePath.generic_string();
+				return fs::exists(candidatePath) ? candidate : base;
 			};
 
 		const std::string findBookmark = themedPath("Resources/Images/FindBookmark.png");
@@ -863,12 +965,19 @@ namespace Frostnux
 		const std::string nextBookmark = themedPath("Resources/Images/NextBookmark.png");
 		const std::string clearBookmark = themedPath("Resources/Images/ClearBookmarks.png");
 
+		std::vector<ShortcutItem> fileGroup =
+		{
+			{ "save", themedPath("Resources/Images/SaveFile.png"), j.value("Save", "Save"), []()
+				{ FX_INFO("Save"); m_Editor.SaveActiveTab(false); } },
+			{ "saveAll", themedPath("Resources/Images/SaveAllFile.png"), j.value("SaveAll", "Save All"), []()
+				{ FX_INFO("Save All"); m_Editor.SaveAllTabs(); } }
+		};
 		std::vector<ShortcutItem> editGroup =
 		{
 			{ "undo", themedPath("Resources/Images/Undo.png"), j.value("Undo", "Undo"), []()
-				{ FX_INFO("Undo"); } },
+				{ FX_INFO("Undo"); if (Tab* tab = m_Editor.activeTab()) m_Editor.doUndo(*tab); } },
 			{ "redo", themedPath("Resources/Images/Redo.png"), j.value("Redo", "Redo"), []()
-				{ FX_INFO("Redo"); } }
+				{ FX_INFO("Redo"); if (Tab* tab = m_Editor.activeTab()) m_Editor.doRedo(*tab); } }
 		};
 		std::vector<ShortcutItem> buildGroup =
 		{
@@ -881,7 +990,7 @@ namespace Frostnux
 			{ "debug", themedPath("Resources/Images/Debug.png"), j.value("Debug", "Debug"), []()
 				{ FX_INFO("Debug"); } }
 		};
-		std::vector<ShortcutItem> bookmarkGroup =
+		std::vector<ShortcutItem> bookmarkGroup =		
 		{
 			{ "findbookmark", findBookmark, j.value("FindBookmark", "Find Bookmark"), []()
 				{ FX_INFO("Find Bookmark"); } },
@@ -895,9 +1004,28 @@ namespace Frostnux
 				{ FX_INFO("Clear Bookmarks"); } }
 		};
 
+		m_ShortcutBar->AddGroup(fileGroup, true);
 		m_ShortcutBar->AddGroup(editGroup, true);
 		m_ShortcutBar->AddGroup(buildGroup, true);
 		m_ShortcutBar->AddGroup(bookmarkGroup, false);
+	}
+
+	void uiLayer::OpenFolder(const std::string& folderPath)
+	{
+		namespace fs = std::filesystem;
+
+		SettingsManager::Get().CloseProject();
+		m_Solution = Solution();
+
+		if (m_SolutionExplorer)
+			m_SolutionExplorer->SetRootFolder(folderPath);
+
+		FX_CORE_INFO("Opened Folder: {}", folderPath);
+
+		m_ProjectIndex.SetRoot(folderPath);
+		m_ProjectIndex.Scan();
+		m_Editor.SetProjectIndex(&m_ProjectIndex);
+		FX_CORE_INFO("ProjectIndex: indexed {} files", m_ProjectIndex.FileCount());
 	}
 
 }

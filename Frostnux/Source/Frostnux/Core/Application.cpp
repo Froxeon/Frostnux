@@ -114,11 +114,18 @@ namespace Frostnux {
 	{
 		FX_TRACE("Frostnux Studio initialized and running.");
 
-		float lastTime = (float)glfwGetTime();
-		do 
+		if (!m_MainWindow)
 		{
-			float currentTime = (float)glfwGetTime();
-			float deltaTime = currentTime - lastTime;
+			FX_CORE_ERROR("Main window is null!");
+			m_Running = false;
+			return;
+		}
+
+		float lastTime = static_cast<float>(glfwGetTime());
+		while (m_Running && !m_MainWindow->ShouldClose())
+		{
+			const float currentTime = static_cast<float>(glfwGetTime());
+			const float deltaTime = currentTime - lastTime;
 			lastTime = currentTime;
 
 			auto [r, g, b] = ThemeManager::GetBGColor();
@@ -127,49 +134,27 @@ namespace Frostnux {
 
 			for (Layer* layer : m_LayerStack)
 			{
-				if (layer)
-				{
-					layer->OnUpdate(deltaTime);
-				}
+				if (layer) layer->OnUpdate(deltaTime);
 			}
 
-			if (m_MainWindow)
-			{
-				m_MainWindow->SetUnsemi_transparency(unsemi_transparency);
-				m_MainWindow->OnUpdate();
-			}
-			else
-			{
-				FX_CORE_ERROR("Main window is null!");
-				m_Running = false;
-			}
+			m_MainWindow->SetUnsemi_transparency(unsemi_transparency);
+			m_MainWindow->OnUpdate();
 
-			std::vector<size_t> closedIndices;
-			for (size_t i = 0; i < m_Windows.size(); ++i)
+			for (auto it = m_Windows.begin(); it != m_Windows.end(); )
 			{
-				auto& win = m_Windows[i];
-
+				auto& win = *it;
 				if (win->ShouldClose())
 				{
-					closedIndices.push_back(i);
+					it = m_Windows.erase(it);
 					continue;
 				}
-
 				win->OnUpdate();
+				++it;
 			}
-
-			for (size_t i = closedIndices.size(); i > 0; --i)
-			{
-				size_t idx = closedIndices[i - 1];
-
-				m_Windows.erase(m_Windows.begin() + idx);
-			}
-		} while (m_Running && !m_MainWindow->ShouldClose());
+		}
 
 		for (auto& win : m_Windows)
-		{
 			win->Close();
-		}
 
 		m_Windows.clear();
 		m_MainWindow = nullptr;

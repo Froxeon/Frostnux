@@ -277,12 +277,14 @@ namespace Frostnux {
 	void WindowsWindow::SetUnsemi_transparency(double value)
 	{
 #ifdef FX_PLATFORM_WINDOWS
-		m_Data.unsemi_transparency = value;
-	
-		HWND hwnd = glfwGetWin32Window(m_Window);
+		if (m_Data.unsemi_transparency == value)
+			return;
 
+		m_Data.unsemi_transparency = value;
+
+		HWND hwnd = glfwGetWin32Window(m_Window);
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-		SetLayeredWindowAttributes(hwnd, 0, (value * 255), LWA_ALPHA);
+		SetLayeredWindowAttributes(hwnd, 0, static_cast<BYTE>(value * 255), LWA_ALPHA);
 #endif
 	}
 

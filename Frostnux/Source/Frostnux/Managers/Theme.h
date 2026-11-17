@@ -1,9 +1,11 @@
 #pragma once
+#include <string>
+#include <tuple>
 
 namespace Frostnux
 {
 
-	enum class Theme
+	enum class Theme : uint8_t
 	{
 		// Dark
 		Dark = 0,
@@ -32,20 +34,18 @@ namespace Frostnux
 			case Theme::Iron:
 				return { 0.01f, 0.03f, 0.07f };
 			}
+			return { 0.0f, 0.0f, 0.0f };
 		}
 		static std::string GetThemeName()
 		{
 			switch (s_CurrentTheme)
 			{
-			case Theme::Dark:
-				return "Dark";
-			case Theme::Paper:
-				return "Paper";
-			case Theme::Frost:
-				return "Frost";
-			case Theme::Iron:
-				return "Iron";
+			case Theme::Dark:   return "Dark";
+			case Theme::Paper:  return "Paper";
+			case Theme::Frost:  return "Frost";
+			case Theme::Iron:   return "Iron";
 			}
+			return "Unknown";
 		}
 		static int GetThemeCount() { return 4; }
 	private:

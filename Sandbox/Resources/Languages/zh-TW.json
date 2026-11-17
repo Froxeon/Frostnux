@@ -20,6 +20,7 @@
 	"SaveFile": "保存文件",
 	"SaveAs": "另存爲",
 	"SaveAllFiles": "保存所有文件",
+	"Delete": "刪除",
 
 	"Undo": "撤銷",
 	"Redo": "重做",
@@ -59,7 +60,10 @@
 	"New Project": "新項目",
 	"New Project Desc": "創建一個新 C++ 項目",
 	"Open Project...": "打開項目...",
+	"Open Project": "打開項目",
 	"Open Project Desc": "打開一個 .frostnux 文件",
+	"Open Folder": "打開文件夾",
+	"Open Folder Desc": "將任何文件夾打開為工作區",
 
 	"Input Tip": "按回車鍵確認，Esc鍵取消。",
 
@@ -72,5 +76,18 @@
 	"Dark": "深色",
 	"Paper": "紙面",
 	"Iron": "鋼鐵",
-	"Frost": "冰霜"
+	"Frost": "冰霜",
+
+	"Add dependency": "添加依賴",
+	"Remove dependency": "移除依賴",
+	"Set as Startup Project": "設為啟動項目",
+	"Add Existing File...": "添加現有文件...",
+	"New Folder...": "新建文件夾...",
+	"Delete Folder Desc": "確定要刪除此文件夾及其所有內容嗎？此操作無法撤銷。",
+	"Delete Folder": "刪除文件夾",
+	"Create New Folder": "新建文件夾",
+	"NewFolder": "新建文件夾",
+
+	"New File...": "新建文件...",
+	"Create New File": "創建新文件"
 }

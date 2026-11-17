@@ -21,15 +21,16 @@ namespace Frostnux {
 		std::ifstream file("Resources/Languages/" + LanguageManager::GetLanguageCode() + ".json");
 		file >> j;
 
-		m_Buttons.resize(2);
+		m_Buttons.resize(3);
 		RefreshText();
 		m_LanguageCode = LanguageManager::GetLanguageCode();
 	}
 
-	void WelcomePage::SetCallbacks(std::function<void()> onNewProject, std::function<void()> onOpenProject)
+	void WelcomePage::SetCallbacks(std::function<void()> onNewProject, std::function<void()> onOpenProject, std::function<void()> onOpenFolder)
 	{
 		m_Buttons[0].onClick = onNewProject;
 		m_Buttons[1].onClick = onOpenProject;
+		m_Buttons[2].onClick = onOpenFolder;
 	}
 
 	void WelcomePage::Layout(float x, float y, float w, float h)
@@ -165,6 +166,8 @@ namespace Frostnux {
 		m_Buttons[0].desc = j.value("New Project Desc", "Create a new C++ project");
 		m_Buttons[1].label = j.value("Open Project...", "Open Project...");
 		m_Buttons[1].desc = j.value("Open Project Desc", "Open a .frostnux or .fxproject");
+		m_Buttons[2].label = j.value("Open Folder", "Open Folder");
+		m_Buttons[2].desc = j.value("Open Folder Desc", "Open any folder as a workspace");
 	}
 
 }

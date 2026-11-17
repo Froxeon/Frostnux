@@ -96,11 +96,21 @@ namespace Frostnux {
 
 		Renderer2D::DrawQuad(confirmX, btnY, btnW, btnH, m_HoverConfirm ? 0.8f : 0.5f, 0.2f, 0.2f, 1.0f);
 		if (TextRenderer::Get().IsInitialized())
-			TextRenderer::Get().DrawTextUTF8(j.value("Confirm", "Confirm"), confirmX + 40, btnY + 10, 1.0f, 1.0f, 1.0f, 1.0f);
+		{
+			std::string confirmText = j.value("Confirm", "Confirm");
+			float textW = TextRenderer::Get().GetTextWidth(confirmText);
+			float textX = confirmX + (btnW - textW) * 0.5f;
+			TextRenderer::Get().DrawTextUTF8(confirmText, textX, btnY + 10, 1.0f, 1.0f, 1.0f, 1.0f);
+		}
 
 		Renderer2D::DrawQuad(cancelX, btnY, btnW, btnH, m_HoverCancel ? 0.4f : 0.3f, 0.3f, 0.3f, 1.0f);
 		if (TextRenderer::Get().IsInitialized())
-			TextRenderer::Get().DrawTextUTF8(j.value("Cancel", "Cancel"), cancelX + 25, btnY + 10, 1.0f, 1.0f, 1.0f, 1.0f);
+		{
+			std::string cancelText = j.value("Cancel", "Cancel");
+			float textW = TextRenderer::Get().GetTextWidth(cancelText);
+			float textX = cancelX + (btnW - textW) * 0.5f;
+			TextRenderer::Get().DrawTextUTF8(cancelText, textX, btnY + 10, 1.0f, 1.0f, 1.0f, 1.0f);
+		}
 	}
 
 	bool uiMessageBox::OnEvent(Event& event)

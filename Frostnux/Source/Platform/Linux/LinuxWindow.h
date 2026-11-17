@@ -36,34 +36,35 @@ namespace Frostnux {
 	private:
 		void Init(const WindowProps& props);
 		void Shutdown();
-		
-		GLFWwindow* m_Window;
+
+		GLFWwindow* m_Window = nullptr;
 
 		struct WindowData
 		{
-			double unsemi_transparency;
-			void* WindowPtr;
 			EventCallbackFn EventCallback;
 			std::string Title;
+			void* WindowPtr = nullptr;
+			double unsemi_transparency = -1.0f;
 
-			unsigned int Width, Height;
+			unsigned int Width = 0;
+			unsigned int Height = 0;
 
-			bool VSync;
+			bool VSync = true;
 		};
 
 		WindowData m_Data;
 
-		bool m_IsResizingWindow = false;
 		int m_ResizeEdgeType = 0;
 		int m_ResizeStartMouseX = 0, m_ResizeStartMouseY = 0;
 		int m_ResizeStartWindowX = 0, m_ResizeStartWindowY = 0;
 		int m_ResizeStartWindowW = 0, m_ResizeStartWindowH = 0;
+		bool m_IsResizingWindow = false;
 
-		GLFWcursor* m_CursorArrow;
-		GLFWcursor* m_CursorHResize;
-		GLFWcursor* m_CursorVResize;
-		GLFWcursor* m_CursorNWSE;
-		GLFWcursor* m_CursorNESW;
+		GLFWcursor* m_CursorArrow = nullptr;
+		GLFWcursor* m_CursorHResize = nullptr;
+		GLFWcursor* m_CursorVResize = nullptr;
+		GLFWcursor* m_CursorNWSE = nullptr;
+		GLFWcursor* m_CursorNESW = nullptr;
 
 		int GetResizeEdge(float mx, float my) const;
 		void UpdateResizeCursor(int edge);

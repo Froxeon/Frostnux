@@ -4,7 +4,6 @@
 
 #include "Frostnux/Core/FileDialog.h"
 #include <cstdio>
-#include <array>
 #include <sstream>
 
 namespace Frostnux {
@@ -73,6 +72,12 @@ namespace Frostnux {
 		cmd += " --file-filter='" + patterns + "'";
 		cmd += " 2>/dev/null";
 
+		return RunCommand(cmd);
+	}
+
+	std::string SelectFolderDialog()
+	{
+		std::string cmd = "zenity --file-selection --directory 2>/dev/null";
 		return RunCommand(cmd);
 	}
 

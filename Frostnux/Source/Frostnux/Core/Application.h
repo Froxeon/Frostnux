@@ -33,13 +33,15 @@ namespace Frostnux {
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 
-		std::unique_ptr<class Window> m_MainWindow;
-		std::vector<std::unique_ptr<Window>> m_Windows;
-		std::vector<std::string> m_CommandLineArgs;
+		std::unique_ptr<class Window>			m_MainWindow;
+		std::vector<std::unique_ptr<Window>>	m_Windows;
+		std::vector<std::string>				m_CommandLineArgs;
+		LayerStack								m_LayerStack;
+		double									unsemi_transparency = 0.99;
+
 		bool m_Running = true;
-		LayerStack m_LayerStack;
+
 		static Application* s_Instance;
-		double unsemi_transparency = 0.99f;
 	};
 
 	// To be defined in CLIENT

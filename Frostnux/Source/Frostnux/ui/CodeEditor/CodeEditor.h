@@ -101,11 +101,13 @@ namespace Frostnux {
 		{
 			m_OnTabListChanged = std::move(fn);
 		}
-	private:
+
+		void doUndo(Tab& t);
+		void doRedo(Tab& t);
 		void doCopy(Tab& t);
 		void doCut(Tab& t);
 		void doPaste(Tab& t);
-
+	private:
 		std::function<std::string()>			m_GetClipboard;
 		std::function<void(const std::string&)>	m_SetClipboard;
 
@@ -216,8 +218,6 @@ namespace Frostnux {
 		void moveEnd(Tab& t, bool selecting, bool docEnd);
 		void movePageUp(Tab& t, bool selecting);
 		void movePageDown(Tab& t, bool selecting);
-		void doUndo(Tab& t);
-		void doRedo(Tab& t);
 		void toggleComment(Tab& t);
 
 		[[nodiscard]] Position	pixelToPosition(Tab& t, float x, float y) const;
